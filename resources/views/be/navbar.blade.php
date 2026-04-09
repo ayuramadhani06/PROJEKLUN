@@ -16,24 +16,7 @@
 
         <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
           <div class="ms-md-auto pe-md-3 d-flex align-items-center">
-            <form method="GET" action="{{ route('traffic.index') }}" class="w-100">
-              <input type="hidden" name="per_page" value="{{ request('per_page', $perPage ?? 5) }}">
-
-              @if(request('open_filter'))
-                <input type="hidden" name="open_filter" value="1">
-              @endif
-
-              <div class="input-group">
-                <span class="input-group-text text-body">
-                  <i class="fas fa-search"></i>
-                </span>
-                <input type="text"
-                      name="search"
-                      value="{{ request('search') }}"
-                      class="form-control"
-                      placeholder="Search IP / Hostname / Protocol...">
-              </div>
-            </form>
+            
 
           </div>
           <ul class="navbar-nav justify-content-end">
