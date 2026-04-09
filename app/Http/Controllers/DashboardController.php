@@ -21,7 +21,7 @@ class DashboardController extends Controller
             ];
 
             $recentActivities = DB::table('flows_active')
-                ->select('client_ip', 'server_name', 'last_seen')
+                ->select('client_ip', 'protocol_l7', 'last_seen')
                 ->orderByDesc('last_seen')
                 ->limit(10)
                 ->get();

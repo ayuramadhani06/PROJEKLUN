@@ -53,7 +53,7 @@
                             @forelse($recentActivities as $act)
                             <tr style="border-bottom: 1px solid #f9f9f9;">
                                 <td class="ps-3 text-dark">{{ $act->client_ip }}</td>
-                                <td class="text-dark">{{ $act-> server_name ?: 'Generic Traffic' }}</td>
+                                <td class="text-dark">{{ $act-> protocol_l7 ?: 'Generic Traffic' }}</td>
                                 <td class="text-end text-muted small pe-3">
                                     {{ \Carbon\Carbon::parse($act->last_seen)->diffForHumans() }}
                                 </td>
