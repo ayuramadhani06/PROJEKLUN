@@ -770,6 +770,17 @@
         @endphp
         <div class="stat-number" id="stat-total-bytes">{{ $tbHuman }}</div>
         <div class="stat-label">Total Data</div>
+        @if($tab === 'history' && $filteredStats)
+          @php $fb = $filteredStats['total_bytes']; @endphp
+          <small style="color: var(--accent); font-size: 0.65rem;">
+            Filtered:
+            @if($fb >= 1000000000) {{ round($fb/1000000000, 2) }} GB
+            @elseif($fb >= 1000000) {{ round($fb/1000000, 2) }} MB
+            @elseif($fb >= 1000) {{ round($fb/1000, 2) }} KB
+            @else {{ $fb }} B
+            @endif
+          </small>
+        @endif
       </div>
       <div class="stat-card-icon"><i class="fas fa-database"></i></div>
     </div>
@@ -782,6 +793,11 @@
       <div>
         <div class="stat-number" id="stat-unique-src">{{ number_format($uniqueSrc) }}</div>
         <div class="stat-label">Unique Sources</div>
+        @if($tab === 'history' && $filteredStats)
+          <small style="color: var(--accent); font-size: 0.65rem;">
+            Filtered: {{ number_format($filteredStats['unique_src']) }}
+          </small>
+        @endif
       </div>
       <div class="stat-card-icon"><i class="fas fa-desktop"></i></div>
     </div>
@@ -794,6 +810,11 @@
       <div>
         <div class="stat-number" id="stat-unique-dst">{{ number_format($uniqueDst) }}</div>
         <div class="stat-label">Unique Destinations</div>
+        @if($tab === 'history' && $filteredStats)
+          <small style="color: var(--accent); font-size: 0.65rem;">
+            Filtered: {{ number_format($filteredStats['unique_dst']) }}
+          </small>
+        @endif
       </div>
       <div class="stat-card-icon"><i class="fas fa-server"></i></div>
     </div>
@@ -801,6 +822,14 @@
 
 
 </div>
+
+{{-- Hidden inputs for stats per tab --}}
+<input type="hidden" id="history-total-bytes" value="{{ $totalBytes }}">
+<input type="hidden" id="history-unique-src" value="{{ $uniqueSrc }}">
+<input type="hidden" id="history-unique-dst" value="{{ $uniqueDst }}">
+<input type="hidden" id="active-total-bytes" value="{{ $totalBytes }}"> {{-- Active uses same totalBytes --}}
+<input type="hidden" id="active-unique-src" value="{{ DB::table('flows_active')->distinct('client_ip')->count('client_ip') }}">
+<input type="hidden" id="active-unique-dst" value="{{ DB::table('flows_active')->distinct('server_ip')->count('server_ip') }}">
 
 {{-- ── Navigasi Tab ── --}}
 <div class="sniffer-tabs">
@@ -869,9 +898,9 @@
         <div class="table-meta">
           <div class="perpage-row">
             <span class="perpage-label">Rows</span>
-            <input type="number" id="input-perpage" value="25"
+            <input type="number" id="input-perpage" value="{{ $perPage }}"
                    min="5" max="200" class="perpage-input"
-                   onchange="fetchLive()">
+                   onchange="saveActivePerpage(); fetchLive();">
           </div>
         </div>
       </div>
@@ -890,7 +919,7 @@
               <th>Info</th>
             </tr>
           </thead>
-          <tbody id="flow-tbody">
+          <tbody id="flow-tbody-active">
             <tr class="table-empty">
               <td colspan="7">
                 <i class="fas fa-satellite-dish"></i>
@@ -905,7 +934,16 @@
       <div class="table-footer">
         <div class="footer-meta">
           <span class="footer-item">
-            Auto-update: <strong id="refresh-status">Active (10s)</strong>
+            Total: <strong id="active-total">0 flows</strong>
+          </span>
+
+          <span class="footer-item">
+            Page: <strong>1 / 1</strong>
+          </span>
+
+          <span class="footer-item">
+            Showing:
+            <strong id="active-showing">0 - 0</strong>
           </span>
         </div>
       </div>
@@ -927,6 +965,8 @@
       <div class="filter-form-wrap">
         <form method="GET" action="{{ route('sniffer.index') }}" class="filter-row">
           <input type="hidden" name="tab" value="history">
+          <input type="hidden" name="start_date" value="{{ $start_date ?? '' }}">
+          <input type="hidden" name="end_date" value="{{ $end_date ?? '' }}">
           
           {{-- Search --}}
           <div class="filter-search-group">
@@ -952,6 +992,12 @@
             @endforeach
           </select>
 
+          {{-- Start Date --}}
+          <input type="date" name="start_date" id="start_date" class="filter-select" value="{{ $start_date ?? '' }}">
+
+          {{-- End Date --}}
+          <input type="date" name="end_date" id="end_date" class="filter-select" value="{{ $end_date ?? '' }}">
+
           {{-- Actions --}}
           <button type="submit" class="btn-apply">Apply</button>
           <a href="{{ route('sniffer.index') }}" class="btn-clear">
@@ -974,11 +1020,13 @@
             <input type="hidden" name="search"      value="{{ $search ?? '' }}">
             <input type="hidden" name="protocol"    value="{{ $protocol ?? '' }}">
             <input type="hidden" name="application" value="{{ $app ?? '' }}">
+            <input type="hidden" name="start_date"  value="{{ $start_date ?? '' }}">
+            <input type="hidden" name="end_date"    value="{{ $end_date ?? '' }}">
             <input type="hidden" name="tab"         value="history">
             <span class="perpage-label">Rows</span>
             <input type="number" name="per_page" value="{{ $perPage }}"
-                   min="10" max="200" id="input-history-perpage"
-                   onchange="this.form.submit()" class="perpage-input">
+                   min="5" max="100" id="input-history-perpage"
+                   onchange="saveHistoryPerpage(); this.form.submit();" class="perpage-input">
           </form>
         </div>
       </div>
@@ -997,7 +1045,7 @@
               <th>Info</th>
             </tr>
           </thead>
-          <tbody id="flow-tbody">
+          <tbody id="flow-tbody-history">
             @forelse($flows as $flow)
             <tr onclick="showHistoryDetail({{ json_encode($flow) }}, this)">
               <td>
@@ -1100,6 +1148,30 @@ let refreshTimer  = null;
 let activeRow     = null;
 let existingKeys = new Set();
 
+// Load saved perpage values
+const savedActivePerpage = localStorage.getItem('sniffer_active_perpage');
+const savedHistoryPerpage = localStorage.getItem('sniffer_history_perpage');
+if (savedActivePerpage) document.getElementById('input-perpage').value = savedActivePerpage;
+if (savedHistoryPerpage) document.getElementById('input-history-perpage').value = savedHistoryPerpage;
+
+// Function to update stats based on tab
+function updateStats(tab) {
+  const totalBytesEl = document.getElementById('stat-total-bytes');
+  const uniqueSrcEl = document.getElementById('stat-unique-src');
+  const uniqueDstEl = document.getElementById('stat-unique-dst');
+
+  if (tab === 'history') {
+    totalBytesEl.textContent = document.getElementById('history-total-bytes').value;
+    uniqueSrcEl.textContent = document.getElementById('history-unique-src').value;
+    uniqueDstEl.textContent = document.getElementById('history-unique-dst').value;
+  } else {
+    // For active, use the values from hidden inputs (initially set)
+    totalBytesEl.textContent = document.getElementById('active-total-bytes').value;
+    uniqueSrcEl.textContent = document.getElementById('active-unique-src').value;
+    uniqueDstEl.textContent = document.getElementById('active-unique-dst').value;
+  }
+}
+
 
 /* ── Formatters ── */
 function renderBytes(b) {
@@ -1123,6 +1195,15 @@ function renderAppBadge(app) {
   return `<span class="badge-app" title="${app}">${app}</span>`;
 }
 
+// Save perpage functions
+function saveActivePerpage() {
+  localStorage.setItem('sniffer_active_perpage', document.getElementById('input-perpage').value);
+}
+
+function saveHistoryPerpage() {
+  localStorage.setItem('sniffer_history_perpage', document.getElementById('input-history-perpage').value);
+}
+
 
 /* ── Live Fetch (Active Tab) ── */
 function fetchLive() {
@@ -1144,9 +1225,25 @@ function fetchLive() {
       document.getElementById('stat-unique-src').textContent  = data.stats.unique_src;
       document.getElementById('stat-unique-dst').textContent  = data.stats.unique_dst;
 
-      const tbody = document.getElementById('flow-tbody');
+      const tbody = document.getElementById('flow-tbody-active');
 
-      if (!data.flows || data.flows.length === 0) return;
+      if (!data.flows || data.flows.length === 0) {
+        tbody.innerHTML = `
+          <tr class="table-empty">
+            <td colspan="7">
+              <i class="fas fa-satellite-dish"></i>
+              <p>No active flows</p>
+            </td>
+          </tr>
+        `;
+
+        document.getElementById('entry-count').textContent = '0 entries';
+        document.getElementById('active-total').textContent = '0 flows';
+        document.getElementById('active-showing').textContent = '0 - 0';
+
+        existingKeys.clear();
+        return;
+      }
 
       let newRows = [];
 
@@ -1188,6 +1285,11 @@ function fetchLive() {
       // Update counter
       const countEl = document.getElementById('entry-count');
       if (countEl) countEl.textContent = tbody.rows.length + ' entries';
+
+      const activeTotalEl = document.getElementById('active-total');
+      if (activeTotalEl) {
+        activeTotalEl.textContent = (data.total ?? 0) + ' flows';
+      }
     })
     .catch(err => console.warn('Live fetch error:', err));
 }
@@ -1225,6 +1327,7 @@ document.getElementById('refresh-select').addEventListener('change', function ()
 });
 
 // Initial load
+updateStats('{{ $tab }}');
 startRefresh(10000);
 
 
@@ -1267,7 +1370,6 @@ function showDetail(flow, rowEl) {
         <table class="table table-sm">
           ${kv('Total Bytes', bh)}
           ${kv('Packets', flow.packets)}
-          ${kv('Duration', (flow.duration || 0) + ' sec')}
           ${kv('Last Seen', flow.seen_last)}
           ${kv('Info', flow.info)}
         </table>
@@ -1349,7 +1451,10 @@ function switchTab(tabName, element) {
         if (refreshTimer) clearInterval(refreshTimer);
     }
 
-    // 4. update URL TANPA reload (optional tapi bagus)
+    // 4. update stats sesuai tab
+    updateStats(tabName);
+
+    // 5. update URL TANPA reload (optional tapi bagus)
     history.pushState(null, '', '?tab=' + tabName);
 }
 
@@ -1360,7 +1465,7 @@ function openModal() {
 
 function resetAndFetch() {
   existingKeys.clear();
-  document.getElementById('flow-tbody').innerHTML = '';
+  document.getElementById('flow-tbody-active').innerHTML = '';
   fetchLive();
 }
 </script>

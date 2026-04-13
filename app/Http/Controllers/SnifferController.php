@@ -11,10 +11,12 @@ class SnifferController extends Controller
     public function index(Request $request)
     {
         $perPage = (int) $request->get('per_page', 25);
-        $perPage = max(1, min($perPage, 500));
+        $perPage = max(1, min($perPage, 100));
         $search   = $request->get('search');
         $protocol = $request->get('protocol');
         $app      = $request->get('application');
+        $start_date = $request->get('start_date');
+        $end_date   = $request->get('end_date');
         $tab      = $request->get('tab', 'active'); // 'active' atau 'history'
 
         try {
@@ -44,6 +46,12 @@ class SnifferController extends Controller
             if (!empty($protocol)) $query->where('protocol_l4', $protocol);
             if (!empty($app))      $query->where('protocol_l7', 'like', "%{$app}%");
 
+            // Date filters for history tab
+            if ($tab === 'history') {
+                if (!empty($start_date)) $query->where('last_seen', '>=', $start_date . ' 00:00:00');
+                if (!empty($end_date))   $query->where('last_seen', '<=', $end_date . ' 23:59:59');
+            }
+
             $flows = $query->paginate($perPage)->appends($request->query());
 
             // Mapping agar Blade tidak error (mengubah nama kolom DB ke nama yang diharapkan Blade)
@@ -63,6 +71,17 @@ class SnifferController extends Controller
             $uniqueSrc  = $baseQuery->distinct('client_ip')->count('client_ip');
             $uniqueDst  = $baseQuery->distinct('server_ip')->count('server_ip');
 
+            // Filtered stats for history tab
+            $filteredStats = null;
+            if ($tab === 'history' && (!empty($start_date) || !empty($end_date) || !empty($search) || !empty($protocol) || !empty($app))) {
+                $filteredQuery = clone $query;
+                $filteredStats = [
+                    'total_bytes' => $filteredQuery->sum('bytes') ?: 0,
+                    'unique_src'  => $filteredQuery->distinct('client_ip')->count('client_ip'),
+                    'unique_dst'  => $filteredQuery->distinct('server_ip')->count('server_ip'),
+                ];
+            }
+
             // List untuk dropdown filter
             $protocolList    = DB::table('flows_history')->select('protocol_l4 as protocol')->distinct()->pluck('protocol');
             $applicationList = DB::table('flows_history')->select('protocol_l7 as application')->distinct()->whereNotNull('protocol_l7')->pluck('application');
@@ -76,7 +95,7 @@ class SnifferController extends Controller
         return view('be.sniffer', compact(
             'flows', 'perPage', 'search', 'protocol', 'app', 'tab',
             'totalFlows', 'totalBytes', 'uniqueSrc', 'uniqueDst',
-            'protocolList', 'applicationList'
+            'protocolList', 'applicationList', 'start_date', 'end_date', 'filteredStats'
         ));
     }
 
