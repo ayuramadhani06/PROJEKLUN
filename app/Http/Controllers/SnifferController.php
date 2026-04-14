@@ -18,20 +18,29 @@ class SnifferController extends Controller
         $start_date = $request->get('start_date');
         $end_date   = $request->get('end_date');
         $tab      = $request->get('tab', 'active'); // 'active' atau 'history'
+        $min_bytes = $request->get('min_bytes');
+        $max_bytes = $request->get('max_bytes');
 
         try {
             DB::purge();
             DB::reconnect();
             DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
 
-            // Tentukan tabel mana yang digunakan berdasarkan tab
-           // Tentukan tabel mana yang digunakan berdasarkan tab
             if ($tab === 'history') {
-                $query = DB::table('flows_history')
-                    ->orderByDesc('last_seen');
+                $query = DB::table('flows_history');
             } else {
-                $query = DB::table('flows_active')
-                    ->orderByDesc('last_seen');
+                $query = DB::table('flows_active');
+            }
+
+            // 🔥 SORT BYTES (WAJIB TARUH DI SINI)
+            $sortBytes = $request->get('sort_bytes');
+
+            if ($sortBytes === 'asc') {
+                $query->orderBy('bytes', 'asc');
+            } elseif ($sortBytes === 'desc') {
+                $query->orderBy('bytes', 'desc');
+            } else {
+                $query->orderByDesc('last_seen'); // default
             }
 
             if (!empty($search)) {
@@ -45,6 +54,13 @@ class SnifferController extends Controller
 
             if (!empty($protocol)) $query->where('protocol_l4', $protocol);
             if (!empty($app))      $query->where('protocol_l7', 'like', "%{$app}%");
+            // 🔥 FILTER BYTES
+            if (!empty($min_bytes)) {
+                $query->where('bytes', '>=', (int)$min_bytes);
+            }
+            if (!empty($max_bytes)) {
+                $query->where('bytes', '<=', (int)$max_bytes);
+            }
 
             // Date filters for history tab
             if ($tab === 'history') {
@@ -110,11 +126,23 @@ class SnifferController extends Controller
             $protocol = $request->get('protocol');
             $app      = $request->get('application');
             $perPage  = (int) $request->get('per_page', 25);
+            $min_bytes = $request->get('min_bytes');
+            $max_bytes = $request->get('max_bytes');
 
             // Untuk API Live, kita ambil dari flows_active agar real-time!
+            $sortBytes = $request->get('sort_bytes');
+
             $query = DB::table('flows_active')
-                    ->where('last_seen', '>=', now()->subSeconds(15)) // 🔥 ini kunci
-                    ->orderByDesc('last_seen');
+                ->where('last_seen', '>=', now()->subSeconds(15));
+
+            // 🔥 SORTING BYTES
+            if ($sortBytes === 'asc') {
+                $query->orderBy('bytes', 'asc');
+            } elseif ($sortBytes === 'desc') {
+                $query->orderBy('bytes', 'desc');
+            } else {
+                $query->orderByDesc('last_seen'); // default
+            }
 
             if (!empty($search)) {
                 $query->where(function ($q) use ($search) {
@@ -125,6 +153,13 @@ class SnifferController extends Controller
             }
             if (!empty($protocol)) $query->where('protocol_l4', $protocol);
             if (!empty($app))      $query->where('protocol_l7', 'like', "%{$app}%");
+            if (!empty($min_bytes)) {
+                $query->where('bytes', '>=', (int)$min_bytes);
+            }
+
+            if (!empty($max_bytes)) {
+                $query->where('bytes', '<=', (int)$max_bytes);
+            }
 
             $total = $query->count();
             $flows = $query->limit($perPage)->get()->map(function ($f) {

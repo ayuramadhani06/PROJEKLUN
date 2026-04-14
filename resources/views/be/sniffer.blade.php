@@ -957,7 +957,14 @@
               <th>Dst IP</th>
               <th>Protocol</th>
               <th>Application</th>
-              <th>Bytes</th>
+              <th>
+                Bytes
+                <select id="sort-bytes-active" class="filter-select" style="margin-left:6px;">
+                  <option value="">--</option>
+                  <option value="desc">High → Low</option>
+                  <option value="asc">Low → High</option>
+                </select>
+              </th>
               <th>Info</th>
             </tr>
           </thead>
@@ -1083,7 +1090,24 @@
               <th>Dst IP</th>
               <th>Protocol</th>
               <th>Application</th>
-              <th>Bytes</th>
+              <th>
+                Bytes
+                <form method="GET" action="{{ route('sniffer.index') }}" style="display:inline;">
+                  <input type="hidden" name="tab" value="history">
+                  <input type="hidden" name="search" value="{{ $search ?? '' }}">
+                  <input type="hidden" name="protocol" value="{{ $protocol ?? '' }}">
+                  <input type="hidden" name="application" value="{{ $app ?? '' }}">
+                  <input type="hidden" name="start_date" value="{{ $start_date ?? '' }}">
+                  <input type="hidden" name="end_date" value="{{ $end_date ?? '' }}">
+                  <input type="hidden" name="per_page" value="{{ $perPage }}">
+
+                  <select name="sort_bytes" class="filter-select" onchange="this.form.submit()" style="margin-left:6px;">
+                    <option value="">--</option>
+                    <option value="desc" {{ request('sort_bytes') == 'desc' ? 'selected' : '' }}>High → Low</option>
+                    <option value="asc"  {{ request('sort_bytes') == 'asc' ? 'selected' : '' }}>Low → High</option>
+                  </select>
+                </form>
+              </th>
               <th>Info</th>
             </tr>
           </thead>
@@ -1254,6 +1278,7 @@ function fetchLive() {
     protocol:    document.getElementById('input-protocol')?.value    || '',
     application: document.getElementById('input-application')?.value || '',
     per_page:    document.getElementById('input-perpage')?.value     || 25,
+    sort_bytes:  document.getElementById('sort-bytes-active')?.value || ''
   });
 
   fetch(`{{ route('sniffer.api') }}?${params}`)
@@ -1510,6 +1535,9 @@ function resetAndFetch() {
   document.getElementById('flow-tbody-active').innerHTML = '';
   fetchLive();
 }
+document.getElementById('sort-bytes-active').addEventListener('change', () => {
+  resetAndFetch();
+});
 </script>
 
 
