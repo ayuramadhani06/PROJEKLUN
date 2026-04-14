@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie; // Tambahkan ini
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+
 
 class LoginController extends Controller
 {
@@ -57,5 +60,31 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    public function showResetForm()
+    {
+        return view('be.reset-password');
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'username' => 'required',
+            'password' => 'required|min:5|confirmed'
+        ]);
+
+        $user = User::where('username', $request->username)->first();
+
+        if (!$user) {
+            return back()->withErrors([
+                'username' => 'Username tidak ditemukan'
+            ]);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return redirect()->route('login')->with('success', 'Password berhasil direset, silakan login.');
     }
 }

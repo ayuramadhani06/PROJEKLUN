@@ -70,6 +70,12 @@
                       Sign In
                     </button>
                   </div>
+                  <div class="text-center mt-3">
+                    <a href="{{ route('password.reset') }}" class="text-sm text-info">
+                      Lupa Password?
+                    </a>
+                  </div>
+
                 </form>
               </div>
 

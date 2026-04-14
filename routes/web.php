@@ -12,6 +12,8 @@ use App\Http\Controllers\{
 Route::get('/', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'process'])->name('login.process');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/reset-password', [LoginController::class, 'showResetForm'])->name('password.reset');
+Route::post('/reset-password', [LoginController::class, 'resetPassword'])->name('password.update');
 
 // --- Halaman Private (Harus Login) ---
 Route::middleware(['auth'])->group(function () {
