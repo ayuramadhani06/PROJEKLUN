@@ -19,8 +19,11 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
+        'role',
+        'permission',
     ];
 
     /**
@@ -42,4 +45,15 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+        // 🔥 TAMBAHIN DI SINI (bebas di bawah)
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    public function canManage()
+    {
+        return $this->permission === 'manage';
+    }
 }

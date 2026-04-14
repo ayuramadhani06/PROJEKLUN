@@ -5,7 +5,8 @@ use App\Http\Controllers\{
     DashboardController,
     LoginController,
     ProfileController,
-    SnifferController
+    SnifferController,
+    UserController
 };
 
 // --- Halaman Public ---
@@ -28,5 +29,14 @@ Route::middleware(['auth'])->group(function () {
 
    Route::get('/sniffer', [SnifferController::class, 'index'])->name('sniffer.index');
     Route::get('/sniffer/aoi', [SnifferController::class, 'api'])->name('sniffer.api');
+
+    Route::middleware(['permission:manage'])->group(function () {
+
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+    });
 
 });
