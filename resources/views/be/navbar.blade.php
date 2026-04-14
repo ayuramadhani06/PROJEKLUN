@@ -38,7 +38,7 @@
                         {{-- Menampilkan Email User --}}
                         <p class="text-xs text-secondary mb-0">
                           <i class="fa fa-envelope me-1"></i>
-                          {{ Auth::user()->email }}
+                          {{ Auth::user()->username }}
                         </p>
                       </div>
                     </div>

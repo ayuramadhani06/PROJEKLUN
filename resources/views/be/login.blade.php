@@ -42,13 +42,13 @@
                 <form method="POST" action="{{ route('login.process') }}">
                   @csrf
 
-                  <label>Email</label>
+                  <label>Username</label>
                   <div class="mb-3">
-                    <input type="email" 
-                          name="email" 
+                    <input type="text" 
+                          name="username" 
                           class="form-control" 
-                          placeholder="Email" 
-                          value="{{ old('email', $rememberedEmail ?? '') }}" 
+                          placeholder="Username" 
+                          value="{{ $rememberedUsername ?? '' }}" 
                           required>
                   </div>
 
@@ -62,7 +62,7 @@
                           type="checkbox" 
                           name="remember" 
                           id="rememberMe" 
-                          {{ ($rememberedEmail || old('remember')) ? 'checked' : '' }}>
+                          {{ ($rememberedUsername || old('remember')) ? 'checked' : '' }}>
                     <label class="form-check-label" for="rememberMe">Remember me</label>
                   </div>
                   <div class="text-center">

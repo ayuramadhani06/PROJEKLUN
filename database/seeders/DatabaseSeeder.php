@@ -16,7 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         User::create([
             'name' => 'Admin Lunanet',
-            'email' => 'admin@lunanet.id', // Ini buat login
+            'username' => 'admin_lunanet', // Ini buat login
+            'email' => 'admin@lunanet.id',
             'password' => Hash::make('admin123'), // Ini passwordnya
         ]);
     }

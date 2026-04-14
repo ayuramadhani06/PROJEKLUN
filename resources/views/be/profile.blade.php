@@ -41,8 +41,8 @@
                                                 <td><input type="text" name="name" class="form-control" value="{{ Auth::user()->name }}" required></td>
                                             </tr>
                                             <tr>
-                                                <th>Email</th>
-                                                <td><input type="email" name="email" class="form-control" value="{{ Auth::user()->email }}" required></td>
+                                                <th>Username</th>
+                                                <td><input type="text" name="username" class="form-control" value="{{ Auth::user()->username }}" required></td>
                                             </tr>
                                         </tbody>
                                     </table>

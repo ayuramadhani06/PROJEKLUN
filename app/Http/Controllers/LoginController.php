@@ -14,16 +14,16 @@ class LoginController extends Controller
             return redirect()->route('dashboard');
         }
 
-        // Ambil email dari cookie jika ada
-        $rememberedEmail = Cookie::get('remembered_email');
+        // Ambil username dari cookie jika ada
+        $rememberedUsername = Cookie::get('remembered_username');
 
-        return view('be.login', compact('rememberedEmail'));
+        return view('be.login', compact('rememberedUsername'));
     }
 
     public function process(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => ['required', 'email'],
+            'username'    => ['required'],
             'password' => ['required'],
         ]);
 
@@ -36,18 +36,18 @@ class LoginController extends Controller
             // LOGIKA COOKIE UNTUK EMAIL:
             if ($remember) {
                 // Simpan email selama 30 hari (43200 menit)
-                Cookie::queue('remembered_email', $request->email, 43200);
+                Cookie::queue('remembered_username', $request->username, 43200);
             } else {
                 // Hapus cookie jika tidak dicentang
-                Cookie::queue(Cookie::forget('remembered_email'));
+                Cookie::queue(Cookie::forget('remembered_username'));
             }
 
             return redirect()->intended('dashboard');
         }
 
         return back()->withErrors([
-            'email' => 'Email atau password salah.',
-        ])->onlyInput('email');
+            'username' => 'Username atau password salah.',
+        ])->onlyInput('username');
     }
 
     public function logout(Request $request)
