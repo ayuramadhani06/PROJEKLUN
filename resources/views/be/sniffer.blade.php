@@ -106,6 +106,48 @@
   }
   .meta-badge strong { color: var(--text-secondary); }
 
+  /* Responsive for topbar - using relative units */
+  @media (max-width: 48rem) { /* ~768px */
+    .sniffer-topbar {
+      padding: 0.625rem 0.9375rem; /* 10px 15px */
+      gap: 0.5rem; /* 8px */
+    }
+    .sniffer-topbar-title {
+      font-size: 0.75rem; /* 12px */
+      gap: 0.375rem; /* 6px */
+    }
+    .sniffer-topbar-title .dot-live {
+      width: 0.375rem; /* 6px */
+      height: 0.375rem; /* 6px */
+    }
+    .meta-badge {
+      font-size: 0.65rem; /* 10.4px */
+      padding: 0.25rem 0.5rem; /* 4px 8px */
+    }
+    .interval-pill {
+      font-size: 0.68rem; /* 10.88px */
+      padding: 0.25rem 0.625rem; /* 4px 10px */
+    }
+    .btn-hard-refresh {
+      font-size: 0.68rem; /* 10.88px */
+      padding: 0.25rem 0.625rem; /* 4px 10px */
+    }
+  }
+
+  @media (max-width: 30rem) { /* ~480px */
+    .sniffer-topbar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem; /* 12px */
+    }
+    .sniffer-topbar-left {
+      width: 100%;
+    }
+    .sniffer-topbar-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
 
   /* Interval Pill */
   .interval-pill {
@@ -1161,12 +1203,12 @@ function updateStats(tab) {
   const uniqueDstEl = document.getElementById('stat-unique-dst');
 
   if (tab === 'history') {
-    totalBytesEl.textContent = document.getElementById('history-total-bytes').value;
+    totalBytesEl.textContent = renderBytes(document.getElementById('history-total-bytes').value);
     uniqueSrcEl.textContent = document.getElementById('history-unique-src').value;
     uniqueDstEl.textContent = document.getElementById('history-unique-dst').value;
   } else {
     // For active, use the values from hidden inputs (initially set)
-    totalBytesEl.textContent = document.getElementById('active-total-bytes').value;
+    totalBytesEl.textContent = renderBytes(document.getElementById('active-total-bytes').value);
     uniqueSrcEl.textContent = document.getElementById('active-unique-src').value;
     uniqueDstEl.textContent = document.getElementById('active-unique-dst').value;
   }

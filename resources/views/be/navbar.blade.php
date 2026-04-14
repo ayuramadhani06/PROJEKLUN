@@ -95,34 +95,13 @@
                 }
             @endphp
 
-            <li class="nav-item dropdown pe-2 d-flex align-items-center">
-              <a href="javascript:;" class="nav-link text-body p-0" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            <li class="nav-item pe-2 d-flex align-items-center">
+              <a href="javascript:;" class="nav-link text-body p-0 d-flex align-items-center justify-content-center" id="dbStatusBell" role="button"
+                 data-bs-toggle="tooltip" data-bs-placement="bottom"
+                 title="{{ $dbConnected ? 'System Online: Successfully connected to PostgreSQL' : 'Database Offline: Check your database connection!' }}">
                 {{-- Ikon lonceng akan berwarna hijau jika konek, merah jika mati --}}
                 <i class="fa fa-bell cursor-pointer {{ $dbConnected ? 'text-success' : 'text-danger' }}"></i>
               </a>
-              <ul class="dropdown-menu dropdown-menu-end px-2 py-3 me-sm-n4" aria-labelledby="dropdownMenuButton">
-                <li class="mb-2">
-                  <a class="dropdown-item border-radius-md" href="javascript:;">
-                    <div class="d-flex py-1">
-                      <div class="my-auto">
-                        {{-- Icon Database --}}
-                        <div class="avatar avatar-sm {{ $dbConnected ? 'bg-gradient-success' : 'bg-gradient-danger' }}  me-3">
-                          <i class="fa fa-database" style="margin-top: 10px;"></i>
-                        </div>
-                      </div>
-                      <div class="d-flex flex-column justify-content-center">
-                        <h6 class="text-sm font-weight-normal mb-1">
-                          <span class="font-weight-bold">{{ $dbConnected ? 'System Online' : 'Database Offline' }}</span>
-                        </h6>
-                        <p class="text-xs text-secondary mb-0">
-                          <i class="fa fa-plug me-1"></i>
-                          {{ $dbConnected ? 'Successfully connected to PostgreSQL' : 'Check your database connection!' }}
-                        </p>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              </ul>
             </li>
           </ul>
         </div>
@@ -149,4 +128,9 @@ function confirmLogout() {
         }
     })
 }
+
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+  return new bootstrap.Tooltip(tooltipTriggerEl);
+});
 </script>
