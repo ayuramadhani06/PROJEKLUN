@@ -25,7 +25,7 @@ class SnifferController extends Controller
 
             // ✅ Total data dari flows_history (akumulasi semua traffic)
             // ✅ Unique src/dst dari flows_active (yang sedang aktif sekarang)
-            $totalBytes = DB::table('flows_active')->sum('bytes') ?: 0;
+            $totalBytes = DB::table('flows_history')->sum('bytes') ?: 0;
             $uniqueSrc  = DB::table('flows_active')->distinct('client_ip')->count('client_ip');
             $uniqueDst  = DB::table('flows_active')->distinct('server_ip')->count('server_ip');
 
@@ -166,7 +166,7 @@ class SnifferController extends Controller
 
             // ✅ Total bytes dari flows_history (akumulasi semua traffic yang pernah lewat)
             // ✅ Unique src/dst dari flows_active (kondisi realtime saat ini)
-            $totalBytes = DB::table('flows_active')->sum('bytes') ?: 0;
+            $totalBytes = DB::table('flows_history')->sum('bytes') ?: 0;
 
             return response()->json([
                 'success' => true,
@@ -194,6 +194,7 @@ class SnifferController extends Controller
         $f->total_bytes = $f->bytes;
         $f->seen_last   = $f->last_seen;
         $f->info        = $f->server_name;
+        $f->hostname    = $f->client_name ?? null; // ✅ kolom baru
         return $f;
     }
 

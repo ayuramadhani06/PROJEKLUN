@@ -439,6 +439,7 @@
   .td-time-main { font-size: 0.76rem; color: var(--text-primary); font-weight: 500; }
   .td-time-ago  { font-size: 0.63rem; color: var(--text-muted); display: block; margin-top: 1px; }
   .td-ip-src    { color: var(--text-primary) !important; font-weight: 600; }
+  .td-hostname  { display: block; font-size: 0.63rem; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
   .td-ip-dst    { color: var(--text-secondary) !important; }
   .td-bytes     { color: var(--text-primary) !important; font-weight: 600; }
   .td-info      { color: var(--text-muted) !important; font-size: 0.71rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -550,7 +551,7 @@
           else                       $tbHuman = $tb . ' B';
         @endphp
         <div class="stat-number" id="stat-total-bytes">{{ $tbHuman }}</div>
-        <div class="stat-label">Total Data Hari Ini</div>
+        <div class="stat-label">Total Data</div>
       </div>
       <div class="stat-card-icon"><i class="fas fa-database"></i></div>
     </div>
@@ -641,7 +642,7 @@
       <thead>
         <tr>
           <th>Time</th>
-          <th>Src IP</th>
+          <th>Src IP / Hostname</th>
           <th>Dst IP</th>
           <th>Protocol</th>
           <th>Application</th>
@@ -788,7 +789,10 @@ function fetchLive() {
             <span class="td-time-main">${(f.seen_last||'').substring(11,19)}</span>
             <span class="td-time-ago">${f.time_ago||''}</span>
           </td>
-          <td class="td-ip-src">${f.src_ip}</td>
+          <td class="td-ip-src">
+            ${f.src_ip}
+            ${f.hostname ? `<span class="td-hostname">${f.hostname}</span>` : ''}
+          </td>
           <td class="td-ip-dst">${f.dest_ip}</td>
           <td>${renderProtoBadge(f.protocol)}</td>
           <td>${renderAppBadge(f.application)}</td>
@@ -860,6 +864,7 @@ function showDetail(flow, rowEl) {
         <h6>Network</h6>
         <table class="table table-sm">
           ${kv('Source IP', flow.src_ip)}
+          ${kv('Hostname', flow.hostname)}
           ${kv('Source Port', flow.client_port)}
           ${kv('Destination IP', flow.dest_ip)}
           ${kv('Dest Port', flow.server_port)}

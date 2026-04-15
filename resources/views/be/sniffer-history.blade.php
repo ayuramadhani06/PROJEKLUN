@@ -403,6 +403,7 @@
   .td-time-main { font-size: 0.76rem; color: var(--text-primary); font-weight: 500; }
   .td-time-ago  { font-size: 0.63rem; color: var(--text-muted); display: block; margin-top: 1px; }
   .td-ip-src    { color: var(--text-primary) !important; font-weight: 600; }
+  .td-hostname  { display: block; font-size: 0.63rem; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
   .td-ip-dst    { color: var(--text-secondary) !important; }
   .td-bytes     { color: var(--text-primary) !important; font-weight: 600; }
   .td-info      { color: var(--text-muted) !important; font-size: 0.71rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -654,7 +655,7 @@
       <thead>
         <tr>
           <th>Last Seen</th>
-          <th>Src IP</th>
+          <th>Src IP / Hostname</th>
           <th>Dst IP</th>
           <th>Protocol</th>
           <th>Application</th>
@@ -684,7 +685,12 @@
             <span class="td-time-main">{{ \Carbon\Carbon::parse($flow->seen_last)->format('H:i:s') }}</span>
             <span class="td-time-ago">{{ \Carbon\Carbon::parse($flow->seen_last)->diffForHumans() }}</span>
           </td>
-          <td class="td-ip-src">{{ $flow->src_ip }}</td>
+          <td class="td-ip-src">
+            {{ $flow->src_ip }}
+            @if(!empty($flow->hostname))
+              <span class="td-hostname">{{ $flow->hostname }}</span>
+            @endif
+          </td>
           <td class="td-ip-dst">{{ $flow->dest_ip }}</td>
           <td>
             @php $pUp = strtoupper($flow->protocol ?? ''); @endphp
@@ -802,6 +808,7 @@ function showHistoryDetail(flow, rowEl) {
         <h6>Network</h6>
         <table class="table table-sm">
           ${kv('Source IP', flow.src_ip)}
+          ${kv('Hostname', flow.hostname)}
           ${kv('Source Port', flow.client_port)}
           ${kv('Destination IP', flow.dest_ip)}
           ${kv('Dest Port', flow.server_port)}
