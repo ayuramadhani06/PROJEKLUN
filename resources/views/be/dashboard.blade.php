@@ -73,7 +73,7 @@
                     <i class="fas fa-tools me-2 text-white"></i> NOC Tools
                 </h6>
                 <div class="d-grid gap-2">
-                    <a href="{{ route('sniffer.index') }}" class="btn btn-danger btn-sm text-start" style="background-color: #8b0000; border: none;">
+                    <a href="{{ route('sniffer.active') }}" class="btn btn-danger btn-sm text-start" style="background-color: #8b0000; border: none;">
                         <i class="fas fa-search me-2"></i> Open Sniffer
                     </a>
                     <a href="{{ route('profile.index') }}" class="btn btn-outline-light btn-sm text-start border-0 mt-1 shadow-none" style="background-color: rgba(255,255,255,0.1);">
