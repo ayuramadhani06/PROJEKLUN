@@ -1,4 +1,4 @@
-@extends('be.master')
+<!-- @extends('be.master')
 
 
 @php
@@ -1541,4 +1541,4 @@ document.getElementById('sort-bytes-active').addEventListener('change', () => {
 </script>
 
 
-@endsection
+@endsection -->

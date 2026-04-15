@@ -8,40 +8,61 @@ use Carbon\Carbon;
 
 class SnifferController extends Controller
 {
-    public function index(Request $request)
+    public function active(Request $request)
     {
-        $perPage = (int) $request->get('per_page', 25);
-        $perPage = max(1, min($perPage, 100));
+        $perPage  = (int) $request->get('per_page', 25);
+        $perPage  = max(1, min($perPage, 100));
         $search   = $request->get('search');
         $protocol = $request->get('protocol');
         $app      = $request->get('application');
-        $start_date = $request->get('start_date');
-        $end_date   = $request->get('end_date');
-        $tab      = $request->get('tab', 'active'); // 'active' atau 'history'
-        $min_bytes = $request->get('min_bytes');
-        $max_bytes = $request->get('max_bytes');
 
         try {
-            DB::purge();
-            DB::reconnect();
+            DB::purge(); DB::reconnect();
             DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
 
-            if ($tab === 'history') {
-                $query = DB::table('flows_history');
-            } else {
-                $query = DB::table('flows_active');
-            }
+            $protocolList    = DB::table('flows_history')->select('protocol_l4 as protocol')->distinct()->pluck('protocol');
+            $applicationList = DB::table('flows_history')->select('protocol_l7 as application')->distinct()->whereNotNull('protocol_l7')->pluck('application');
 
-            // 🔥 SORT BYTES (WAJIB TARUH DI SINI)
+            // ✅ Total data dari flows_history (akumulasi semua traffic)
+            // ✅ Unique src/dst dari flows_active (yang sedang aktif sekarang)
+            $totalBytes = DB::table('flows_active')->sum('bytes') ?: 0;
+            $uniqueSrc  = DB::table('flows_active')->distinct('client_ip')->count('client_ip');
+            $uniqueDst  = DB::table('flows_active')->distinct('server_ip')->count('server_ip');
+
+        } catch (\Exception $e) {
+            $totalBytes = $uniqueSrc = $uniqueDst = 0;
+            $protocolList = $applicationList = collect();
+        }
+
+        return view('be.sniffer-active', compact(
+            'perPage', 'search', 'protocol', 'app',
+            'totalBytes', 'uniqueSrc', 'uniqueDst',
+            'protocolList', 'applicationList'
+        ));
+    }
+
+    public function history(Request $request)
+    {
+        $perPage    = (int) $request->get('per_page', 25);
+        $perPage    = max(1, min($perPage, 100));
+        $search     = $request->get('search');
+        $protocol   = $request->get('protocol');
+        $app        = $request->get('application');
+        $start_date = $request->get('start_date');
+        $end_date   = $request->get('end_date');
+        $min_bytes  = $request->get('min_bytes');
+        $max_bytes  = $request->get('max_bytes');
+
+        try {
+            DB::purge(); DB::reconnect();
+            DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
+
+            $query = DB::table('flows_history');
+
             $sortBytes = $request->get('sort_bytes');
-
-            if ($sortBytes === 'asc') {
-                $query->orderBy('bytes', 'asc');
-            } elseif ($sortBytes === 'desc') {
-                $query->orderBy('bytes', 'desc');
-            } else {
-                $query->orderByDesc('last_seen'); // default
-            }
+            if ($sortBytes === 'asc')      $query->orderBy('bytes', 'asc');
+            elseif ($sortBytes === 'desc') $query->orderBy('bytes', 'desc');
+            else                           $query->orderByDesc('last_seen');
 
             if (!empty($search)) {
                 $query->where(function ($q) use ($search) {
@@ -52,64 +73,50 @@ class SnifferController extends Controller
                 });
             }
 
-            if (!empty($protocol)) $query->where('protocol_l4', $protocol);
-            if (!empty($app))      $query->where('protocol_l7', 'like', "%{$app}%");
-            // 🔥 FILTER BYTES
-            if (!empty($min_bytes)) {
-                $query->where('bytes', '>=', (int)$min_bytes);
-            }
-            if (!empty($max_bytes)) {
-                $query->where('bytes', '<=', (int)$max_bytes);
-            }
+            if (!empty($protocol))   $query->where('protocol_l4', $protocol);
+            if (!empty($app))        $query->where('protocol_l7', 'like', "%{$app}%");
+            if (!empty($min_bytes))  $query->where('bytes', '>=', (int)$min_bytes);
+            if (!empty($max_bytes))  $query->where('bytes', '<=', (int)$max_bytes);
+            if (!empty($start_date)) $query->where('last_seen', '>=', $start_date . ' 00:00:00');
+            if (!empty($end_date))   $query->where('last_seen', '<=', $end_date . ' 23:59:59');
 
-            // Date filters for history tab
-            if ($tab === 'history') {
-                if (!empty($start_date)) $query->where('last_seen', '>=', $start_date . ' 00:00:00');
-                if (!empty($end_date))   $query->where('last_seen', '<=', $end_date . ' 23:59:59');
-            }
-
-            $flows = $query->paginate($perPage)->appends($request->query());
-
-            // Mapping agar Blade tidak error (mengubah nama kolom DB ke nama yang diharapkan Blade)
-            $flows->getCollection()->transform(function ($f) {
-                return $this->mapFlowColumns($f);
-            });
-            
-            // --- STATS ---
-            if ($tab === 'history') {
-                $baseQuery = DB::table('flows_history');
-            } else {
-                $baseQuery = DB::table('flows_active');
-            }
-
-            $totalFlows = $baseQuery->count();
-            $totalBytes = DB::table('flows_history')->sum('bytes') ?: 0;
-            $uniqueSrc  = $baseQuery->distinct('client_ip')->count('client_ip');
-            $uniqueDst  = $baseQuery->distinct('server_ip')->count('server_ip');
-
-            // Filtered stats for history tab
+            // ✅ Clone SEBELUM paginate() agar filteredStats bisa pakai query yang sama
             $filteredStats = null;
-            if ($tab === 'history' && (!empty($start_date) || !empty($end_date) || !empty($search) || !empty($protocol) || !empty($app))) {
+            $hasFilter = !empty($start_date) || !empty($end_date) || !empty($search)
+                      || !empty($protocol)   || !empty($app)      || !empty($min_bytes)
+                      || !empty($max_bytes);
+
+            if ($hasFilter) {
                 $filteredQuery = clone $query;
                 $filteredStats = [
                     'total_bytes' => $filteredQuery->sum('bytes') ?: 0,
-                    'unique_src'  => $filteredQuery->distinct('client_ip')->count('client_ip'),
-                    'unique_dst'  => $filteredQuery->distinct('server_ip')->count('server_ip'),
+                    'unique_src'  => (clone $filteredQuery)->distinct('client_ip')->count('client_ip'),
+                    'unique_dst'  => (clone $filteredQuery)->distinct('server_ip')->count('server_ip'),
                 ];
             }
 
-            // List untuk dropdown filter
+            // Paginate setelah clone
+            $flows = $query->paginate($perPage)->appends($request->query());
+            $flows->getCollection()->transform(fn($f) => $this->mapFlowColumns($f));
+
+            // ✅ Stats global (tanpa filter) — selalu dari keseluruhan flows_history
+            $totalFlows = DB::table('flows_history')->count();
+            $totalBytes = DB::table('flows_history')->sum('bytes') ?: 0;
+            $uniqueSrc  = DB::table('flows_history')->distinct('client_ip')->count('client_ip');
+            $uniqueDst  = DB::table('flows_history')->distinct('server_ip')->count('server_ip');
+
             $protocolList    = DB::table('flows_history')->select('protocol_l4 as protocol')->distinct()->pluck('protocol');
             $applicationList = DB::table('flows_history')->select('protocol_l7 as application')->distinct()->whereNotNull('protocol_l7')->pluck('application');
 
         } catch (\Exception $e) {
-            $flows = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage);
-            $totalFlows = $totalBytes = $uniqueSrc = $uniqueDst = 0;
-            $protocolList = $applicationList = collect();
+            $flows         = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage);
+            $totalFlows    = $totalBytes = $uniqueSrc = $uniqueDst = 0;
+            $filteredStats = null;
+            $protocolList  = $applicationList = collect();
         }
 
-        return view('be.sniffer', compact(
-            'flows', 'perPage', 'search', 'protocol', 'app', 'tab',
+        return view('be.sniffer-history', compact(
+            'flows', 'perPage', 'search', 'protocol', 'app',
             'totalFlows', 'totalBytes', 'uniqueSrc', 'uniqueDst',
             'protocolList', 'applicationList', 'start_date', 'end_date', 'filteredStats'
         ));
@@ -122,27 +129,20 @@ class SnifferController extends Controller
             DB::reconnect();
             DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
 
-            $search   = $request->get('search');
-            $protocol = $request->get('protocol');
-            $app      = $request->get('application');
-            $perPage  = (int) $request->get('per_page', 25);
+            $search    = $request->get('search');
+            $protocol  = $request->get('protocol');
+            $app       = $request->get('application');
+            $perPage   = (int) $request->get('per_page', 25);
             $min_bytes = $request->get('min_bytes');
             $max_bytes = $request->get('max_bytes');
-
-            // Untuk API Live, kita ambil dari flows_active agar real-time!
             $sortBytes = $request->get('sort_bytes');
 
             $query = DB::table('flows_active')
                 ->where('last_seen', '>=', now()->subSeconds(15));
 
-            // 🔥 SORTING BYTES
-            if ($sortBytes === 'asc') {
-                $query->orderBy('bytes', 'asc');
-            } elseif ($sortBytes === 'desc') {
-                $query->orderBy('bytes', 'desc');
-            } else {
-                $query->orderByDesc('last_seen'); // default
-            }
+            if ($sortBytes === 'asc')      $query->orderBy('bytes', 'asc');
+            elseif ($sortBytes === 'desc') $query->orderBy('bytes', 'desc');
+            else                           $query->orderByDesc('last_seen');
 
             if (!empty($search)) {
                 $query->where(function ($q) use ($search) {
@@ -151,25 +151,22 @@ class SnifferController extends Controller
                       ->orWhere('server_name', 'like', "%{$search}%");
                 });
             }
-            if (!empty($protocol)) $query->where('protocol_l4', $protocol);
-            if (!empty($app))      $query->where('protocol_l7', 'like', "%{$app}%");
-            if (!empty($min_bytes)) {
-                $query->where('bytes', '>=', (int)$min_bytes);
-            }
 
-            if (!empty($max_bytes)) {
-                $query->where('bytes', '<=', (int)$max_bytes);
-            }
+            if (!empty($protocol))  $query->where('protocol_l4', $protocol);
+            if (!empty($app))       $query->where('protocol_l7', 'like', "%{$app}%");
+            if (!empty($min_bytes)) $query->where('bytes', '>=', (int)$min_bytes);
+            if (!empty($max_bytes)) $query->where('bytes', '<=', (int)$max_bytes);
 
             $total = $query->count();
             $flows = $query->limit($perPage)->get()->map(function ($f) {
-                $mapped = $this->mapFlowColumns($f);
+                $mapped           = $this->mapFlowColumns($f);
                 $mapped->time_ago = Carbon::parse($f->last_seen)->diffForHumans();
                 return $mapped;
             });
 
-            // Stats terbaru
-            $totalBytes = DB::table('flows_history')->sum('bytes') ?: 0;
+            // ✅ Total bytes dari flows_history (akumulasi semua traffic yang pernah lewat)
+            // ✅ Unique src/dst dari flows_active (kondisi realtime saat ini)
+            $totalBytes = DB::table('flows_active')->sum('bytes') ?: 0;
 
             return response()->json([
                 'success' => true,
@@ -182,24 +179,26 @@ class SnifferController extends Controller
                 ],
                 'server_time' => now()->format('H:i:s'),
             ]);
+
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    // Helper untuk menyamakan nama kolom DB dengan property di Blade/JS
-    private function mapFlowColumns($f) {
+    private function mapFlowColumns($f)
+    {
         $f->src_ip      = $f->client_ip;
         $f->dest_ip     = $f->server_ip;
         $f->protocol    = $f->protocol_l4;
         $f->application = $f->protocol_l7;
         $f->total_bytes = $f->bytes;
         $f->seen_last   = $f->last_seen;
-        $f->info        = $f->server_name; // Menggunakan server_name sebagai info
+        $f->info        = $f->server_name;
         return $f;
     }
 
-    private function formatBytes($bytes, $precision = 2) {
+    private function formatBytes($bytes, $precision = 2)
+    {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         $bytes = max($bytes, 0);
         $pow   = floor(($bytes ? log($bytes) : 0) / log(1000));

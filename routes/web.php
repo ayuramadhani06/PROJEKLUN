@@ -27,8 +27,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-   Route::get('/sniffer', [SnifferController::class, 'index'])->name('sniffer.index');
-    Route::get('/sniffer/aoi', [SnifferController::class, 'api'])->name('sniffer.api');
+    Route::get('/sniffer/active', [SnifferController::class, 'active'])->name('sniffer.active');
+    Route::get('/sniffer/history', [SnifferController::class, 'history'])->name('sniffer.history');
+    Route::get('/sniffer/api', [SnifferController::class, 'api'])->name('sniffer.api');
+
+    // Redirect /sniffer ke /sniffer/active biar ga 404
+    Route::get('/sniffer', fn() => redirect()->route('sniffer.active'));
 
     Route::middleware(['permission:manage'])->group(function () {
 
