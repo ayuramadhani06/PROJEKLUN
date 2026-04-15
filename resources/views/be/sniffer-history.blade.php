@@ -657,8 +657,8 @@
           <th>Last Seen</th>
           <th>Src IP / Hostname</th>
           <th>Dst IP</th>
-          <th>Protocol</th>
-          <th>Application</th>
+          <th>Protocol (l4)</th>
+          <th>Application (l7)</th>
           <th>
             Bytes
             <form method="GET" action="{{ route('sniffer.history') }}" style="display:inline;">

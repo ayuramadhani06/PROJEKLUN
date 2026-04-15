@@ -644,8 +644,8 @@
           <th>Time</th>
           <th>Src IP / Hostname</th>
           <th>Dst IP</th>
-          <th>Protocol</th>
-          <th>Application</th>
+          <th>Protocol (L4)</th>
+          <th>Protocol (L7)</th>
           <th>
             Bytes
             <select id="sort-bytes-active" class="filter-select" style="margin-left:6px;">

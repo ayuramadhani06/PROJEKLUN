@@ -45,7 +45,7 @@
                         <thead>
                             <tr style="font-size: 12px; color: #666; border-bottom: 2px solid #eee;">
                                 <th class="ps-3">Source IP</th>
-                                <th>Application / Protocol</th>
+                                <th>Protocol</th>
                                 <th class="text-end pe-3">Last Seen</th>
                             </tr>
                         </thead>
