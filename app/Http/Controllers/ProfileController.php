@@ -5,12 +5,24 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB; // Tambahkan ini
+use App\Services\RetentionPolicyService; // Tambahkan ini
 
 class ProfileController extends Controller
 {
-    public function index()
+    // Inject Service ke method index
+    public function index(RetentionPolicyService $retentionService)
     {
-        return view('be.profile');
+        // Ambil data retention days dari tabel system_settings
+        $retentionDays = DB::table('system_settings')
+            ->where('key', 'retention_days')
+            ->value('value') ?? 30;
+
+        // Ambil status policy aktual dari service TimescaleDB
+        $activePolicy = $retentionService->getActivePolicy();
+
+        // Kirim data ke view
+        return view('be.profile', compact('retentionDays', 'activePolicy'));
     }
 
     // Update Nama dan Email

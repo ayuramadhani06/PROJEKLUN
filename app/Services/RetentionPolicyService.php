@@ -41,4 +41,14 @@ class RetentionPolicyService
 
         Log::info("Retention policy applied: {$days} days");
     }
+
+    public function getActivePolicy(): ?object
+    {
+        return DB::selectOne("
+            SELECT hypertable_name, config->>'drop_after' as drop_after
+            FROM timescaledb_information.jobs
+            WHERE proc_name = 'policy_retention'
+            AND hypertable_name = ?
+        ", [$this->hypertable]);
+    }
 }

@@ -193,13 +193,32 @@
                 @endif
                 
                 <!--Start Retention Policy -->
-                <div class="tab-pane fade" id="retention" role="tabpanel">
+<div class="tab-pane fade" id="retention" role="tabpanel">
+                    <div class="row justify-content-center mb-4">
+                            <div class="col-md-10">
+                                <div class="alert d-flex flex-column gap-1"
+                                    style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; color:#166534; font-size:0.85rem; margin-bottom:0;">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <i class="fas fa-database" style="font-size:14px;"></i>
+                                        <strong style="font-size:0.95rem;">Active TimescaleDB Status</strong>
+                                    </div>
+                                    
+                                    @if($activePolicy)
+                                        <div class="d-flex flex-column gap-1 ps-2" style="border-left: 2px solid #86efac;">
+                                            <span><strong>Target Table:</strong> <code style="color:#166534; background:#dcfce7; padding:2px 6px; border-radius:4px;">{{ $activePolicy->hypertable_name }}</code></span>
+                                            <span><strong>Action:</strong> Menghapus data lebih tua dari <strong>{{ $activePolicy->drop_after }}</strong> secara otomatis.</span>
+                                        </div>
+                                    @else
+                                        <div class="d-flex align-items-center gap-2 text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>Belum ada retention policy yang berjalan di level database.</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
 
-                    @php
-                        $retentionDays = \Illuminate\Support\Facades\DB::table('system_settings')
-                            ->where('key', 'retention_days')
-                            ->value('value') ?? 30;
-                    @endphp
+                    {{-- BLOK @php UNTUK AMBIL $retentionDays DI SINI SUDAH DIHAPUS --}}
 
                     @if($isReadOnly)
 
