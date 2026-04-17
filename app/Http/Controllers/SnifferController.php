@@ -195,6 +195,7 @@ class SnifferController extends Controller
         $f->seen_last   = $f->last_seen;
         $f->info        = $f->server_name;
         $f->hostname    = $f->client_name ?? null; // ✅ kolom baru
+        $f->column_info = $f->column_info; // ✅ kolom baru
         return $f;
     }
 

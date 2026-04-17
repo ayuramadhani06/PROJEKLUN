@@ -399,6 +399,7 @@
   #flow-table th:nth-child(5), #flow-table td:nth-child(5) { min-width: 100px; }
   #flow-table th:nth-child(6), #flow-table td:nth-child(6) { min-width: 90px; }
   #flow-table th:nth-child(7), #flow-table td:nth-child(7) { max-width: 180px; }
+  #flow-table th:nth-child(8), #flow-table td:nth-child(8) { max-width: 180px; }
 
   .td-time-main { font-size: 0.76rem; color: var(--text-primary); font-weight: 500; }
   .td-time-ago  { font-size: 0.63rem; color: var(--text-muted); display: block; margin-top: 1px; }
@@ -676,6 +677,7 @@
             </form>
           </th>
           <th>Info</th>
+          <th>Column Info</th>
         </tr>
       </thead>
       <tbody id="flow-tbody-history">
@@ -714,10 +716,11 @@
             @endif
           </td>
           <td class="td-info">{{ $flow->info ?: '—' }}</td>
+          <td class="td-info">{{ $flow->column_info ?: '—' }}</td>
         </tr>
         @empty
         <tr>
-          <td colspan="7">
+          <td colspan="8">
             <div class="table-empty">
               <i class="fas fa-satellite-dish" style="opacity:0.3;"></i>
               <p>No historical data found.</p>
@@ -796,7 +799,7 @@ function showHistoryDetail(flow, rowEl) {
     ? `<span class="badge-app">${flow.application}</span>` : '—';
 
   function kv(label, val) {
-    return `<tr><td>${label}</td><td>${val||'—'}</td></tr>`;
+    return `<tr><td>${label}</td><td style="max-width:260px;white-space:normal;word-break:break-word;">${val||'—'}</td></tr>`;
   }
 
   document.getElementById('modal-title').textContent =
@@ -826,6 +829,7 @@ function showHistoryDetail(flow, rowEl) {
           ${kv('First Seen', flow.first_seen)}
           ${kv('Last Seen', flow.seen_last)}
           ${kv('Info', flow.info)}
+          ${kv('Column Info', flow.column_info)}
         </table>
       </div>
     </div>
