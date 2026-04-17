@@ -40,6 +40,13 @@
                         Privacy & Security
                     </button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="retention-tab"
+                            data-bs-toggle="tab" data-bs-target="#retention"
+                            type="button" role="tab">
+                        Retention Policy
+                    </button>
+                </li>
                 @else
                 {{-- Tab terkunci untuk read-only --}}
                 <li class="nav-item">
@@ -184,7 +191,76 @@
                     </form>
                 </div>
                 @endif
+                
+                <!--Start Retention Policy -->
+                <div class="tab-pane fade" id="retention" role="tabpanel">
 
+                    @php
+                        $retentionDays = \Illuminate\Support\Facades\DB::table('system_settings')
+                            ->where('key', 'retention_days')
+                            ->value('value') ?? 30;
+                    @endphp
+
+                    @if($isReadOnly)
+
+                        <div class="alert d-flex align-items-center gap-2"
+                            style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; color:#92400e; font-size:0.82rem;">
+                            <i class="fas fa-lock"></i>
+                            <span>Retention policy tidak bisa diubah oleh akun read-only.</span>
+                        </div>
+
+                        <div class="mt-3">
+                            <strong>Current Retention:</strong> {{ $retentionDays }} days
+                        </div>
+
+                    @else
+
+                    <form id="formRetention" action="{{ route('retention.update') }}" method="POST">
+                        @csrf
+
+                        <div class="row justify-content-center">
+                            <div class="col-md-10">
+
+                                <div class="table-responsive">
+                                    <table class="table table-borderless align-middle">
+                                        <tbody>
+                                            <tr>
+                                                <th width="30%">Retention (Days)</th>
+                                                <td>
+                                                    <input type="number"
+                                                        name="retention_days"
+                                                        class="form-control"
+                                                        value="{{ $retentionDays }}"
+                                                        min="1"
+                                                        max="365"
+                                                        required>
+                                                    <small class="text-muted">
+                                                        Data lama akan otomatis dibuang ke tempat sampah.
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="text-end mt-3">
+                                    <button type="button"
+                                            onclick="confirmSubmit('formRetention')"
+                                            class="btn btn-info"
+                                            style="background: linear-gradient(135deg, #8b0000 0%, #4a0e4e 100%);">
+                                        Save Retention Policy
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </form>
+
+                    @endif
+
+                </div>
+                <!--Finish Retention Policy -->
             </div>
         </div>
     </div>

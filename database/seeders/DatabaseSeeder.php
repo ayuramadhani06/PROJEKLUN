@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
             'username' => 'admin_lunanet', // Ini buat login
             'email' => 'admin@lunanet.id',
             'password' => Hash::make('admin123'), // Ini passwordnya
+            'role' => 'admin',
+            'permission' => 'manage'
         ]);
     }
 }
