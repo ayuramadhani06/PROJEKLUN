@@ -655,7 +655,7 @@
               <option value="asc">Low → High</option>
             </select>
           </th>
-          <th>Info</th>
+          <th>Server Name</th>
           <th>Column Info</th>
         </tr>
       </thead>
@@ -880,7 +880,6 @@ function showDetail(flow, rowEl) {
         <h6>Statistics</h6>
         <table class="table table-sm">
           ${kv('Total Bytes', bh)}
-          ${kv('Packets', flow.packets)}
           ${kv('Last Seen', flow.seen_last)}
           ${kv('Info', flow.info)}
           ${kv('Column Info', flow.column_info)}

@@ -676,7 +676,7 @@
               </select>
             </form>
           </th>
-          <th>Info</th>
+          <th>Server Name</th>
           <th>Column Info</th>
         </tr>
       </thead>
@@ -824,7 +824,6 @@ function showHistoryDetail(flow, rowEl) {
         <h6>Statistics</h6>
         <table class="table table-sm">
           ${kv('Total Bytes', bh)}
-          ${kv('Packets', flow.packets)}
           ${kv('Duration', (flow.duration || 0) + ' sec')}
           ${kv('First Seen', flow.first_seen)}
           ${kv('Last Seen', flow.seen_last)}
