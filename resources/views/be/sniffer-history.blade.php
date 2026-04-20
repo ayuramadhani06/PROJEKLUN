@@ -406,7 +406,7 @@
   .td-ip-src    { color: var(--text-primary) !important; font-weight: 600; }
   .td-hostname  { display: block; font-size: 0.63rem; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
   .td-bytes     { color: var(--text-primary) !important; font-weight: 600; }
-  .td-info      { color: var(--text-muted) !important; font-size: 0.71rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-info      { color: var(--text-primary) !important; font-size: 0.71rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── BADGES ── */
   .badge-proto {
