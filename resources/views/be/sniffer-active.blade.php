@@ -441,7 +441,6 @@
   .td-time-ago  { font-size: 0.63rem; color: var(--text-muted); display: block; margin-top: 1px; }
   .td-ip-src    { color: var(--text-primary) !important; font-weight: 600; }
   .td-hostname  { display: block; font-size: 0.63rem; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
-  .td-ip-dst    { color: var(--text-secondary) !important; }
   .td-bytes     { color: var(--text-primary) !important; font-weight: 600; }
   .td-info      { color: var(--text-muted) !important; font-size: 0.71rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -643,8 +642,8 @@
       <thead>
         <tr>
           <th>Time</th>
-          <th>Src IP / Hostname</th>
-          <th>Dst IP</th>
+          <th>Src IP</th>
+          <th>Hostname</th>
           <th>Protocol (L4)</th>
           <th>Protocol (L7)</th>
           <th>
@@ -793,9 +792,8 @@ function fetchLive() {
           </td>
           <td class="td-ip-src">
             ${f.src_ip}
-            ${f.hostname ? `<span class="td-hostname">${f.hostname}</span>` : ''}
           </td>
-          <td class="td-ip-dst">${f.dest_ip}</td>
+          <td class="td-ip-dst">${f.hostname}</td>
           <td>${renderProtoBadge(f.protocol)}</td>
           <td>${renderAppBadge(f.application)}</td>
           <td class="td-bytes">${renderBytes(f.total_bytes)}</td>
