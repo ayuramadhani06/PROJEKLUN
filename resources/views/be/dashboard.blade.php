@@ -122,64 +122,78 @@
     .table-hover tbody tr:hover { background-color: #fafafa !important; }
 </style>
 
+@section('script')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
 <script>
-const ctx    = document.getElementById('appChart').getContext('2d');
-const labels = {!! json_encode($topApps->pluck('app')) !!};
-const data   = {!! json_encode($topApps->pluck('total')) !!};
-const total  = data.reduce((a, b) => a + b, 0);
+document.addEventListener("DOMContentLoaded", function() {
 
-const palette = [
-    '#8b0000', '#c0392b', '#e74c3c',
-    '#e67e22', '#f39c12', '#d35400'
-];
+    const canvas = document.getElementById('appChart');
 
-new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-        labels: labels,
-        datasets: [{
-            data: data,
-            backgroundColor: palette,
-            borderWidth: 2,
-            borderColor: '#fff'
-        }]
-    },
-    plugins: [ChartDataLabels],
-    options: {
-        responsive: true,
-        maintainAspectRatio: false, // <-- WAJIB: Supaya chart mengikuti tinggi container
-        cutout: '60%',
-        plugins: {
-            legend: {
-                position: 'bottom',
-                labels: {
-                    color: '#374151',
-                    usePointStyle: true,
-                    padding: 16,
-                    font: { size: 12 }
-                }
-            },
-            datalabels: {
-                color: '#fff',
-                font: { weight: 'bold', size: 11 },
-                formatter: (value) => {
-                    const pct = (value / total * 100).toFixed(1);
-                    return pct > 3 ? pct + '%' : '';
-                }
-            },
-            tooltip: {
-                callbacks: {
-                    label: (ctx) => {
-                        const pct = (ctx.parsed / total * 100).toFixed(1);
-                        return ` ${ctx.label}: ${ctx.formattedValue} flows (${pct}%)`;
+    // ✅ CEGAH ERROR NULL
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    const labels = {!! json_encode($topApps->pluck('app')) !!};
+    const data   = {!! json_encode($topApps->pluck('total')) !!};
+
+    // ✅ GANTI NAMA (hindari bentrok)
+    const totalValue = data.reduce((a, b) => a + b, 0);
+
+    const palette = [
+        '#8b0000', '#c0392b', '#e74c3c',
+        '#e67e22', '#f39c12', '#d35400'
+    ];
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: palette,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#374151',
+                        usePointStyle: true,
+                        padding: 16,
+                        font: { size: 12 }
+                    }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => {
+                        const pct = (value / totalValue * 100).toFixed(1);
+                        return pct > 3 ? pct + '%' : '';
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const pct = (ctx.parsed / totalValue * 100).toFixed(1);
+                            return ` ${ctx.label}: ${ctx.formattedValue} flows (${pct}%)`;
+                        }
                     }
                 }
             }
         }
-    }
+    });
+
 });
 </script>
+@endsection
 @endsection

@@ -632,7 +632,7 @@
 <div class="card-shell">
   <div class="card-head">
     <div class="card-head-title">
-      <i class="fas fa-archive"></i> Historical Flows (flows_history)
+      <i class="fas fa-archive"></i> Historical Flows
       <span class="entry-count-badge">{{ $flows->total() }} entries</span>
     </div>
     <div class="table-meta">
@@ -650,8 +650,8 @@
     </div>
   </div>
 
-  <div>
-    <table id="flow-table">
+  <div class="table-responsive">
+    <table id="flow-table" class="table align-middle">
       <thead>
         <tr>
           <th>Last Seen</th>

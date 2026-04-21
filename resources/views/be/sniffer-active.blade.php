@@ -637,8 +637,8 @@
     </div>
   </div>
 
-  <div>
-    <table id="flow-table">
+  <div class="table-responsive">
+    <table id="flow-table" class="table align-middle">
       <thead>
         <tr>
           <th>Time</th>
