@@ -3,7 +3,7 @@
 @section('content')
 <div class="container-fluid py-4">
     <div class="mb-4 pb-2 border-bottom" style="border-color: #f8d7da !important;">
-        <h4 class="fw-bold" style="color: #8b0000;">Network Management NOC</h4>
+        <h4 class="fw-bold" style="color: #8b0000;">Live Activity</h4>
         <p class="text-muted small">Ringkasan operasional sistem monitoring.</p>
     </div>
 
@@ -35,8 +35,11 @@
     </div>
 
     <div class="row mt-4">
+
         <div class="col-12 col-lg-9">
-            <div class="card border-0 shadow-sm h-100">
+
+            {{-- Live Network Activity --}}
+            <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-0 py-3">
                     <h6 class="m-0 fw-bold">Live Network Activity</h6>
                 </div>
@@ -45,26 +48,54 @@
                         <thead>
                             <tr style="font-size: 12px; color: #666; border-bottom: 2px solid #eee;">
                                 <th class="ps-3">Source IP</th>
-                                <th>Protocol</th>
+                                <th>Hostname</th>
+                                <th>Application / Protocol</th>
                                 <th class="text-end pe-3">Last Seen</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($recentActivities as $act)
                             <tr style="border-bottom: 1px solid #f9f9f9;">
-                                <td class="ps-3 text-dark">{{ $act->client_ip }}</td>
-                                <td class="text-dark">{{ $act-> protocol_l7 ?: 'Generic Traffic' }}</td>
+                                <td class="ps-3 text-dark fw-semibold" style="font-size:13px;">
+                                    {{ $act->client_ip }}
+                                </td>
+                                <td>
+                                    @if(!empty($act->client_name))
+                                        <span style="font-size:12px; color:#4b5563;">{{ $act->client_name }}</span>
+                                    @else
+                                        <span style="font-size:12px; color:#d1d5db;">—</span>
+                                    @endif
+                                </td>
+                                <td class="text-dark" style="font-size:13px;">
+                                    {{ $act->protocol_l7 ?: 'Generic Traffic' }}
+                                </td>
                                 <td class="text-end text-muted small pe-3">
                                     {{ \Carbon\Carbon::parse($act->last_seen)->diffForHumans() }}
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="3" class="text-center p-5 text-muted">No activity detected.</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center p-5 text-muted">No activity detected.</td>
+                            </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            {{-- Top Applications Donut --}}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="m-0 fw-bold">Top Applications</h6>
+                </div>
+                <div class="card-body py-3">
+                    {{-- Hapus div pembungkus yang ada width 380px tadi --}}
+                    <div class="chart-container" style="position: relative; height:300px; width:100%">
+                        <canvas id="appChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <div class="col-12 col-lg-3">
@@ -81,22 +112,74 @@
                     </a>
                 </div>
             </div>
-            
-            <!-- <div class="card border-0 shadow-sm p-3" style="background-color: #fdf2f2; border: 1px solid #f8d7da;">
-                <h6 class="fw-bold small mb-2" style="color: #8b0000;">System Health</h6>
-                <p class="mb-0" style="font-size: 11px; color: #a52a2a;">
-                    Monitor: <span class="fw-bold text-success">Online</span><br>
-                    DB Status: <span class="fw-bold text-success">Connected</span>
-                </p>
-            </div> -->
         </div>
+
     </div>
 </div>
 
 <style>
     .card { border-radius: 12px; }
-    .table-hover tbody tr:hover {
-        background-color: #fafafa !important;
-    }
+    .table-hover tbody tr:hover { background-color: #fafafa !important; }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+<script>
+const ctx    = document.getElementById('appChart').getContext('2d');
+const labels = {!! json_encode($topApps->pluck('app')) !!};
+const data   = {!! json_encode($topApps->pluck('total')) !!};
+const total  = data.reduce((a, b) => a + b, 0);
+
+const palette = [
+    '#8b0000', '#c0392b', '#e74c3c',
+    '#e67e22', '#f39c12', '#d35400'
+];
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: data,
+            backgroundColor: palette,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    plugins: [ChartDataLabels],
+    options: {
+        responsive: true,
+        maintainAspectRatio: false, // <-- WAJIB: Supaya chart mengikuti tinggi container
+        cutout: '60%',
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: '#374151',
+                    usePointStyle: true,
+                    padding: 16,
+                    font: { size: 12 }
+                }
+            },
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: (value) => {
+                    const pct = (value / total * 100).toFixed(1);
+                    return pct > 3 ? pct + '%' : '';
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => {
+                        const pct = (ctx.parsed / total * 100).toFixed(1);
+                        return ` ${ctx.label}: ${ctx.formattedValue} flows (${pct}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
 @endsection
