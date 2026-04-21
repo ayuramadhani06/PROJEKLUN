@@ -485,7 +485,7 @@
   .table-empty p { font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); margin: 0; }
 
   /* ══════════════════════════════════════════
-     TABLE FOOTER / PAGINATION
+     TABLE FOOTER / PAGINATION (sama seperti history)
   ══════════════════════════════════════════ */
   .table-footer {
     background: var(--bg-muted);
@@ -500,6 +500,56 @@
   .footer-meta { display: flex; gap: 16px; flex-wrap: wrap; }
   .footer-item { font-family: var(--mono); font-size: 0.67rem; color: var(--text-muted); }
   .footer-item strong { color: var(--text-secondary); }
+
+  /* Pagination overrides */
+  .pagination { margin: 0; gap: 3px; }
+  .pagination .page-link {
+    background: var(--bg-card);
+    border-color: var(--border);
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 6px !important;
+    transition: all 0.15s;
+  }
+  .pagination .page-link:hover {
+    background: var(--bg-muted);
+    border-color: #c8cdd6;
+    color: var(--text-primary);
+  }
+  .pagination .page-item.active .page-link {
+    background: var(--text-primary);
+    border-color: var(--text-primary);
+    color: #fff;
+  }
+  .pagination .page-item.disabled .page-link {
+    background: var(--bg-muted);
+    color: var(--text-faint);
+    border-color: var(--border-soft);
+  }
+
+  /* Layout */
+  #flow-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 900px;
+  }
+
+  #flow-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #flow-table td:nth-child(7),
+  #flow-table td:nth-child(8) {
+    max-width: 220px;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
 </style>
 
 {{-- ══════════════════════════════════════════
@@ -539,7 +589,7 @@
 {{-- ══════════════════════════════════════════
      STAT CARDS
 ══════════════════════════════════════════ --}}
-<div class="stat-grid">
+<!-- <div class="stat-grid">
   <div class="stat-card">
     <div class="stat-card-top">
       <div>
@@ -576,7 +626,7 @@
       <div class="stat-card-icon"><i class="fas fa-server"></i></div>
     </div>
   </div>
-</div>
+</div> -->
 
 {{-- ══════════════════════════════════════════
      FILTER
@@ -637,8 +687,8 @@
     </div>
   </div>
 
-  <div class="table-responsive">
-    <table id="flow-table" class="table align-middle">
+  <div class="table-wrapper">
+    <table id="flow-table" class="table-align-middle">
       <thead>
         <tr>
           <th>Time</th>
@@ -674,13 +724,16 @@
       <span class="footer-item">
         Total: <strong id="active-total">0 flows</strong>
       </span>
+
       <span class="footer-item">
-        Page: <strong>1 / 1</strong>
+        Page: <strong id="active-page">1 / 1</strong>
       </span>
+
       <span class="footer-item">
         Showing: <strong id="active-showing">0 - 0</strong>
       </span>
     </div>
+      <div id="pagination-active" style="padding:10px;"></div>
   </div>
 </div>
 
@@ -705,12 +758,13 @@
 </div>
 
 {{-- ══════════════════════════════════════════
-     SCRIPTS
+     SCRIPTS (FIXED)
 ══════════════════════════════════════════ --}}
 <script>
 let refreshTimer = null;
 let activeRow    = null;
-let existingKeys = new Set();
+let existingRows = new Map(); // key → tr element
+let currentPage  = 1;
 
 // Load saved perpage
 const savedActivePerpage = localStorage.getItem('sniffer_active_perpage');
@@ -740,14 +794,20 @@ function renderAppBadge(app) {
   return `<span class="badge-app" title="${app}">${app}</span>`;
 }
 
+/* ── KEY GENERATOR (IMPORTANT) ── */
+function flowKey(f) {
+  return f.unique_flow_key;
+}
+
 /* ── Live Fetch ── */
 function fetchLive() {
   const params = new URLSearchParams({
-    search:      document.getElementById('input-search')?.value      || '',
-    protocol:    document.getElementById('input-protocol')?.value    || '',
-    application: document.getElementById('input-application')?.value || '',
-    per_page:    document.getElementById('input-perpage')?.value     || 25,
-    sort_bytes:  document.getElementById('sort-bytes-active')?.value || ''
+    page:        currentPage,
+    per_page:    document.getElementById('input-perpage').value,
+    search:      document.getElementById('input-search').value,
+    protocol:    document.getElementById('input-protocol').value,
+    application: document.getElementById('input-application').value,
+    sort_bytes:  document.getElementById('sort-bytes-active').value
   });
 
   fetch(`{{ route('sniffer.api') }}?${params}`)
@@ -755,72 +815,155 @@ function fetchLive() {
     .then(data => {
       if (!data.success) return;
 
-      document.getElementById('last-update').textContent      = data.server_time;
+      patchTable(data.flows); // DIFF UPDATE
+      renderFooter(data);
+      renderPagination(data);
+
+      document.getElementById('entry-count').textContent =
+        data.flows.length + ' entries';
+
+      document.getElementById('last-update').textContent = data.server_time;
       document.getElementById('stat-total-bytes').textContent = data.stats.total_bytes;
       document.getElementById('stat-unique-src').textContent  = data.stats.unique_src;
       document.getElementById('stat-unique-dst').textContent  = data.stats.unique_dst;
-
-      const tbody = document.getElementById('flow-tbody-active');
-
-      if (!data.flows || data.flows.length === 0) {
-        tbody.innerHTML = `
-          <tr class="table-empty">
-            <td colspan="8">
-              <i class="fas fa-satellite-dish"></i>
-              <p>No active flows</p>
-            </td>
-          </tr>`;
-        document.getElementById('entry-count').textContent = '0 entries';
-        document.getElementById('active-total').textContent = '0 flows';
-        document.getElementById('active-showing').textContent = '0 - 0';
-        existingKeys.clear();
-        return;
-      }
-
-      let newRows = [];
-
-      data.flows.forEach(f => {
-        const key = f.src_ip + '-' + f.dest_ip + '-' + f.seen_last;
-        if (existingKeys.has(key)) return;
-        existingKeys.add(key);
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>
-            <span class="td-time-main">${(f.seen_last||'').substring(11,19)}</span>
-            <span class="td-time-ago">${f.time_ago||''}</span>
-          </td>
-          <td class="td-ip-src">
-            ${f.src_ip}
-          </td>
-          <td class="td-ip-dst">${f.hostname}</td>
-          <td>${renderProtoBadge(f.protocol)}</td>
-          <td>${renderAppBadge(f.application)}</td>
-          <td class="td-bytes">${renderBytes(f.total_bytes)}</td>
-          <td class="td-info">${f.info||'—'}</td>
-          <td class="td-info">${f.column_info||'—'}</td>
-        `;
-        row.onclick = () => showDetail(f, row);
-        newRows.push(row);
-      });
-
-      newRows.reverse().forEach(r => tbody.prepend(r));
-
-      const maxRows = parseInt(document.getElementById('input-perpage').value) || 25;
-      while (tbody.rows.length > maxRows) {
-        tbody.deleteRow(-1);
-      }
-
-      const countEl = document.getElementById('entry-count');
-      if (countEl) countEl.textContent = tbody.rows.length + ' entries';
-
-      const activeTotalEl = document.getElementById('active-total');
-      if (activeTotalEl) activeTotalEl.textContent = (data.total ?? 0) + ' flows';
-    })
-    .catch(err => console.warn('Live fetch error:', err));
+    });
 }
 
-/* ── Refresh control ── */
+/* ── DIFF TABLE UPDATE (NO FLICKER) ── */
+function patchTable(flows) {
+  const tbody = document.getElementById('flow-tbody-active');
+  const newKeys = new Set();
+
+  if (tbody.querySelector('.table-empty')) {
+    tbody.innerHTML = '';
+  }  
+
+  if (!flows.length) {
+    tbody.innerHTML = `
+      <tr class="table-empty">
+        <td colspan="8">No active flows</td>
+      </tr>`;
+    existingRows.clear();
+    return;
+  }
+
+  flows.forEach((f, index) => {
+    const key = flowKey(f);
+    newKeys.add(key);
+
+    let row = existingRows.get(key);
+
+    const html = `
+      <td>
+        <span class="td-time-main">${(f.seen_last||'').substring(11,19)}</span>
+        <span class="td-time-ago">${f.time_ago||''}</span>
+      </td>
+      <td class="td-ip-src">${f.src_ip}</td>
+      <td>${f.hostname||'—'}</td>
+      <td>${renderProtoBadge(f.protocol)}</td>
+      <td>${renderAppBadge(f.application)}</td>
+      <td class="td-bytes">${renderBytes(f.total_bytes)}</td>
+      <td>${f.info||'—'}</td>
+      <td>${f.column_info||'—'}</td>
+    `;
+
+    if (!row) {
+      row = document.createElement('tr');
+      row.innerHTML = html;
+      row.onclick = () => showDetail(f, row);
+
+      existingRows.set(key, row);
+      tbody.appendChild(row);
+    } else {
+      // update only if changed
+      if (row.innerHTML !== html) {
+        row.innerHTML = html;
+      }
+
+      // reposition (maintain order)
+      if (tbody.children[index] !== row) {
+        tbody.insertBefore(row, tbody.children[index]);
+      }
+    }
+  });
+
+  // remove old rows
+  existingRows.forEach((row, key) => {
+    if (!newKeys.has(key)) {
+      row.remove();
+      existingRows.delete(key);
+    }
+  });
+}
+
+/* ── Footer ── */
+function renderFooter(data) {
+  document.getElementById('active-total').textContent =
+    data.total + ' flows';
+
+  document.getElementById('active-page').textContent =
+    data.current_page + ' / ' + data.last_page;
+
+  if (data.total === 0) {
+    document.getElementById('active-showing').textContent = '0 - 0';
+    return;
+  }
+
+  const start = (data.current_page - 1) * data.per_page + 1;
+  const end   = Math.min(start + data.flows.length - 1, data.total);
+
+  document.getElementById('active-showing').textContent =
+    `${start} - ${end}`;
+}
+
+/* ── Pagination ── */
+function renderPagination(data) {
+  let html = `<ul class="pagination">`;
+
+  const maxButtons = 5;
+  let start = Math.max(1, data.current_page - 2);
+  let end   = Math.min(data.last_page, start + maxButtons - 1);
+
+  // PREV
+  html += `
+    <li class="page-item ${data.current_page === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="javascript:void(0)" onclick="goPage(${data.current_page - 1})">
+        &laquo;
+      </a>
+    </li>
+  `;
+
+  // NUMBER
+  for (let i = start; i <= end; i++) {
+    html += `
+      <li class="page-item ${i === data.current_page ? 'active' : ''}">
+        <a class="page-link" href="javascript:void(0)" onclick="goPage(${i})">
+          ${i}
+        </a>
+      </li>
+    `;
+  }
+
+  // NEXT
+  html += `
+    <li class="page-item ${data.current_page === data.last_page ? 'disabled' : ''}">
+      <a class="page-link" href="javascript:void(0)" onclick="goPage(${data.current_page + 1})">
+        &raquo;
+      </a>
+    </li>
+  `;
+
+  html += `</ul>`;
+
+  document.getElementById('pagination-active').innerHTML = html;
+}
+
+function goPage(page) {
+  currentPage = page;
+  fetchLive();
+}
+
+/* ── Refresh ── */
 function startRefresh(interval) {
   if (refreshTimer) clearInterval(refreshTimer);
   const dot = document.getElementById('live-dot');
@@ -833,13 +976,13 @@ function startRefresh(interval) {
 
   dot.style.animation  = 'live-pulse 2s infinite';
   dot.style.background = '#22c55e';
+
   refreshTimer = setInterval(fetchLive, interval);
   fetchLive();
 }
 
-document.getElementById('refresh-select').addEventListener('change', function () {
-  startRefresh(parseInt(this.value));
-});
+document.getElementById('refresh-select')
+  .addEventListener('change', e => startRefresh(parseInt(e.target.value)));
 
 /* ── Detail Modal ── */
 function showDetail(flow, rowEl) {
@@ -853,7 +996,7 @@ function showDetail(flow, rowEl) {
     ? `<span class="badge-app">${flow.application}</span>` : '—';
 
   function kv(label, val) {
-    return `<tr><td>${label}</td><td style="max-width:260px;white-space:normal;word-break:break-word;">${val||'—'}</td></tr>`;
+    return `<tr><td>${label}</td><td>${val||'—'}</td></tr>`;
   }
 
   document.getElementById('modal-title').textContent =
@@ -878,6 +1021,8 @@ function showDetail(flow, rowEl) {
         <h6>Statistics</h6>
         <table class="table table-sm">
           ${kv('Total Bytes', bh)}
+          ${kv('Duration', (flow.duration || 0) + ' sec')}
+          ${kv('First Seen', flow.first_seen)}
           ${kv('Last Seen', flow.seen_last)}
           ${kv('Info', flow.info)}
           ${kv('Column Info', flow.column_info)}
@@ -889,17 +1034,18 @@ function showDetail(flow, rowEl) {
   new bootstrap.Modal(document.getElementById('flowDetailModal')).show();
 }
 
+/* ── Reset ── */
 function resetAndFetch() {
-  existingKeys.clear();
+  currentPage = 1;
+  existingRows.clear();
   document.getElementById('flow-tbody-active').innerHTML = '';
   fetchLive();
 }
 
-document.getElementById('sort-bytes-active').addEventListener('change', () => {
-  resetAndFetch();
-});
+document.getElementById('sort-bytes-active')
+  .addEventListener('change', resetAndFetch);
 
-// Initial load
+/* ── Init ── */
 startRefresh(10000);
 </script>
 
