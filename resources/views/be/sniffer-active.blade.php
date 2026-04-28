@@ -638,7 +638,7 @@
     </div>
   </div>
   <div class="filter-form-wrap">
-    <div class="filter-row">
+    <form class="filter-row" onsubmit="event.preventDefault(); resetAndFetch();">
       <div class="filter-search-group">
         <span class="icon-prefix"><i class="fas fa-search"></i></span>
         <input type="text" id="input-search"
@@ -664,7 +664,7 @@
       <a href="{{ route('sniffer.active') }}" class="btn-clear">
         <i class="fas fa-times"></i>
       </a>
-    </div>
+    </form>
   </div>
 </div>
 
