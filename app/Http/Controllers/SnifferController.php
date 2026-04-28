@@ -158,10 +158,20 @@ public function api(Request $request)
         }
 
         // ── SORT (IMPORTANT: stable sort) ──
+        // if ($sort === 'asc') {
+        //     $query->orderBy('bytes', 'asc');
+        // } elseif ($sort === 'desc') {
+        //     $query->orderBy('bytes', 'desc');
+        // } else {
+        //     $query->orderByDesc('bytes')
+        //           ->orderByDesc('last_seen');
+        // }
         if ($sort === 'asc') {
-            $query->orderBy('bytes', 'asc');
+            $query->orderBy('bytes', 'asc')
+                  ->orderByDesc('last_seen');
         } elseif ($sort === 'desc') {
-            $query->orderBy('bytes', 'desc');
+            $query->orderBy('bytes', 'desc')
+                  ->orderByDesc('last_seen');
         } else {
             $query->orderByDesc('bytes')
                   ->orderByDesc('last_seen');

@@ -848,7 +848,7 @@ function patchTable(flows) {
   }
 
   flows.forEach((f, index) => {
-    const key = flowKey(f);
+    const key = flowKey(f); // Pastikan ini sudah pakai f.unique_flow_key dari perbaikan sebelumnya
     newKeys.add(key);
 
     let row = existingRows.get(key);
@@ -867,27 +867,32 @@ function patchTable(flows) {
       <td>${f.column_info||'—'}</td>
     `;
 
+    // 1. Buat Baris Baru atau Update Baris Lama
     if (!row) {
       row = document.createElement('tr');
       row.innerHTML = html;
       row.onclick = () => showDetail(f, row);
-
       existingRows.set(key, row);
-      tbody.appendChild(row);
     } else {
-      // update only if changed
       if (row.innerHTML !== html) {
         row.innerHTML = html;
       }
+    }
 
-      // reposition (maintain order)
-      if (tbody.children[index] !== row) {
+    // 2. Reposisi Akurat (Mencegah Bug Tabel Acak)
+    // Jika elemen di index ini tidak sama dengan row yang seharusnya...
+    if (tbody.children[index] !== row) {
+      // Jika di index tersebut sudah ada elemen lain, sisipkan row sebelum elemen itu
+      if (tbody.children[index]) {
         tbody.insertBefore(row, tbody.children[index]);
+      } else {
+        // Jika index kosong (di akhir), baru kita append
+        tbody.appendChild(row);
       }
     }
   });
 
-  // remove old rows
+  // 3. Hapus baris yang sudah tidak ada di halaman ini
   existingRows.forEach((row, key) => {
     if (!newKeys.has(key)) {
       row.remove();
@@ -996,7 +1001,7 @@ function showDetail(flow, rowEl) {
     ? `<span class="badge-app">${flow.application}</span>` : '—';
 
   function kv(label, val) {
-    return `<tr><td>${label}</td><td>${val||'—'}</td></tr>`;
+    return `<tr><td>${label}</td><td style="max-width:260px;white-space:normal;word-break:break-word;">${val||'—'}</td></tr>`;
   }
 
   document.getElementById('modal-title').textContent =
@@ -1021,10 +1026,9 @@ function showDetail(flow, rowEl) {
         <h6>Statistics</h6>
         <table class="table table-sm">
           ${kv('Total Bytes', bh)}
-          ${kv('Duration', (flow.duration || 0) + ' sec')}
           ${kv('First Seen', flow.first_seen)}
           ${kv('Last Seen', flow.seen_last)}
-          ${kv('Info', flow.info)}
+          ${kv('Server Name', flow.info)}
           ${kv('Column Info', flow.column_info)}
         </table>
       </div>
